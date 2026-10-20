@@ -1,0 +1,1502 @@
+/*
+ * Plain, hand-written CSS — no Tailwind, no PostCSS, no framework (global
+ * constraint). Covers the root layout and the components in
+ * components/auth/frame.tsx. Light/dark via prefers-color-scheme only; there
+ * is no manual theme toggle in this pilot.
+ */
+
+:root {
+  --auth-bg: #f7f7f8;
+  --auth-fg: #16181d;
+  --auth-muted: #5b6069;
+  --auth-border: #dcdee3;
+  --auth-panel-bg: #ffffff;
+  --auth-accent: #16181d;
+  --auth-accent-fg: #ffffff;
+  --auth-error: #b3261e;
+  --auth-error-bg: #fdecea;
+  --auth-ok: #1e7a3c;
+  --auth-ok-bg: #eaf6ee;
+  --auth-info-bg: #eef1f5;
+
+  --auth-font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
+    sans-serif;
+  --auth-font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono",
+    monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --auth-bg: #121316;
+    --auth-fg: #eceef1;
+    --auth-muted: #9aa0aa;
+    --auth-border: #2c2f36;
+    --auth-panel-bg: #1a1c20;
+    --auth-accent: #eceef1;
+    --auth-accent-fg: #121316;
+    --auth-error: #ff6b63;
+    --auth-error-bg: #3a1c1a;
+    --auth-ok: #63d38a;
+    --auth-ok-bg: #16301f;
+    --auth-info-bg: #20232a;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  padding: 0;
+  margin: 0;
+}
+
+/* ── Signed-in home ────────────────────────────────────────────────────── */
+
+.home-shell {
+  --home-accent: #5b5bd6;
+  --home-accent-soft: #efefff;
+  --home-card: rgba(255, 255, 255, 0.9);
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 0%, rgba(91, 91, 214, 0.15), transparent 34rem),
+    radial-gradient(circle at 95% 25%, rgba(61, 184, 160, 0.09), transparent 28rem),
+    var(--auth-bg);
+}
+
+.home-nav {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 68px;
+  padding: 0 2rem;
+  border-bottom: 1px solid var(--auth-border);
+  background: color-mix(in srgb, var(--auth-panel-bg) 84%, transparent);
+  backdrop-filter: blur(16px);
+}
+
+.home-brand { display: flex; align-items: center; gap: 0.65rem; color: var(--auth-fg); font-size: 14px; font-weight: 700; text-decoration: none; }
+.home-account { display: flex; align-items: center; gap: 1rem; color: var(--auth-muted); font-size: 12px; }
+.home-nav-action { padding: 0.55rem 0.8rem; border: 1px solid var(--auth-border); border-radius: 9px; background: var(--auth-panel-bg); color: var(--auth-fg); font-weight: 650; text-decoration: none; }
+
+.home-main { width: 100%; max-width: 1160px; margin: 0 auto; padding: 4.5rem 2rem 3rem; }
+.home-hero { display: flex; align-items: end; justify-content: space-between; gap: 3rem; margin-bottom: 3rem; }
+.home-kicker { color: var(--home-accent); font-family: var(--auth-font-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+.home-hero h1 { max-width: 650px; margin: 0.75rem 0 0; font-size: clamp(38px, 6vw, 64px); line-height: 1.02; letter-spacing: -0.055em; }
+.home-hero p { max-width: 600px; margin: 1rem 0 0; color: var(--auth-muted); font-size: 16px; line-height: 1.6; }
+
+.home-summary { display: flex; flex: 0 0 auto; overflow: hidden; border: 1px solid var(--auth-border); border-radius: 16px; background: var(--home-card); box-shadow: 0 18px 50px rgba(16, 24, 40, 0.07); }
+.home-summary div { display: flex; min-width: 120px; padding: 1rem; flex-direction: column; border-right: 1px solid var(--auth-border); }
+.home-summary div:last-child { border-right: 0; }
+.home-summary strong { font-size: 26px; letter-spacing: -0.04em; }
+.home-summary span { margin-top: 0.2rem; color: var(--auth-muted); font-size: 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+
+.home-org-list { display: flex; flex-direction: column; gap: 1.5rem; }
+.home-org { padding: 1.75rem; border: 1px solid var(--auth-border); border-radius: 20px; background: var(--home-card); box-shadow: 0 1px 2px rgba(16, 24, 40, 0.03), 0 20px 55px rgba(16, 24, 40, 0.06); }
+.home-org-header { display: flex; align-items: start; justify-content: space-between; gap: 2rem; }
+.home-org-header h2 { margin: 0.35rem 0 0.8rem; font-size: 25px; letter-spacing: -0.035em; }
+.home-badges { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+.home-text-link { color: var(--home-accent); font-size: 12px; font-weight: 650; text-decoration: none; white-space: nowrap; }
+
+.home-app-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 0.75rem; margin-top: 1.75rem; }
+.home-app { display: grid; grid-template-columns: auto 1fr; align-items: center; gap: 0.8rem; padding: 1rem; border: 1px solid var(--auth-border); border-radius: 13px; background: color-mix(in srgb, var(--auth-bg) 45%, transparent); }
+.home-app-icon { display: grid; place-items: center; width: 38px; height: 38px; border-radius: 11px; background: linear-gradient(145deg, #7070ea, #4848c1); color: white; font-size: 15px; font-weight: 750; box-shadow: 0 7px 18px rgba(70, 70, 190, 0.2); }
+.home-app div { display: flex; min-width: 0; flex-direction: column; gap: 0.15rem; }
+.home-app strong { font-size: 13px; }
+.home-app div span { color: var(--auth-muted); font-size: 11px; }
+.home-app i { grid-column: 1 / -1; display: block; height: 3px; overflow: hidden; border-radius: 2px; background: var(--auth-border); }
+.home-app i b { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--home-accent), #3db8a0); }
+
+.home-connect { display: grid; grid-template-columns: minmax(200px, 0.8fr) minmax(320px, 1.2fr); align-items: end; gap: 2rem; margin-top: 1.5rem; padding: 1.4rem; border-radius: 15px; background: var(--home-accent-soft); }
+.home-connect-copy h3 { margin: 0.35rem 0; font-size: 17px; }
+.home-connect-copy p { margin: 0; color: var(--auth-muted); font-size: 12px; line-height: 1.55; }
+.home-connect .copy-field { margin: 0; }
+.home-plugin-steps { display: grid; justify-items: start; gap: 0.75rem; }
+.home-plugin-steps .home-nav-action { font-size: 13px; }
+.home-plugin-steps ol { margin: 0; padding-left: 1.1rem; color: var(--auth-muted); font-size: 12px; line-height: 1.55; }
+
+.home-setup { margin-top: 1rem; border-top: 1px solid var(--auth-border); }
+.home-setup summary { padding: 1rem 0 0; color: var(--auth-fg); font-size: 12px; font-weight: 650; cursor: pointer; }
+.home-setup-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; padding-top: 1rem; }
+.home-setup-grid > div { padding: 1rem; border: 1px solid var(--auth-border); border-radius: 12px; }
+.home-setup-grid > div > span { color: var(--home-accent); font-family: var(--auth-font-mono); font-size: 10px; }
+.home-setup-grid h3 { margin: 0.4rem 0; font-size: 14px; }
+.home-setup-grid p { margin: 0; color: var(--auth-muted); font-size: 12px; line-height: 1.5; }
+.home-setup-grid pre { max-width: 100%; margin: 0.8rem 0 0; padding: 0.8rem; overflow-x: auto; border-radius: 8px; background: var(--auth-bg); font-family: var(--auth-font-mono); font-size: 10px; line-height: 1.5; }
+
+.home-empty { padding: 4rem 2rem; border: 1px dashed var(--auth-border); border-radius: 20px; text-align: center; background: var(--home-card); }
+.home-empty-icon { color: var(--home-accent); font-size: 34px; }
+.home-empty h2 { margin: 0.8rem 0 0.4rem; }
+.home-empty p, .home-muted { color: var(--auth-muted); font-size: 13px; }
+.home-footer { display: flex; justify-content: space-between; gap: 1rem; margin-top: 2rem; padding: 1.25rem 0; color: var(--auth-muted); font-size: 11px; }
+.home-footer a { color: var(--auth-fg); }
+
+@media (prefers-color-scheme: dark) {
+  .home-shell { --home-accent: #aaaaff; --home-accent-soft: #29294a; --home-card: rgba(26, 28, 32, 0.92); }
+}
+
+@media (max-width: 760px) {
+  .home-nav { padding: 0 1rem; }
+  .home-account > span { display: none; }
+  .home-main { padding: 2.5rem 1rem 2rem; }
+  .home-hero { align-items: stretch; flex-direction: column; gap: 1.5rem; }
+  .home-summary { width: 100%; }
+  .home-summary div { min-width: 0; flex: 1 1 0; }
+  .home-org { padding: 1.25rem; }
+  .home-org-header { flex-direction: column; gap: 0.75rem; }
+  .home-connect, .home-setup-grid { grid-template-columns: 1fr; gap: 1rem; }
+}
+
+body {
+  background: var(--auth-bg);
+  color: var(--auth-fg);
+  font-family: var(--auth-font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Auth frame ─────────────────────────────────────────────────────────── */
+
+.auth-frame {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 400px;
+  margin: 0 auto;
+  padding: 4rem 1.25rem 3rem;
+}
+
+.auth-wordmark {
+  color: var(--auth-fg);
+  font-weight: 600;
+}
+
+.auth-eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 2rem;
+  font-family: var(--auth-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--auth-muted);
+}
+
+.auth-title {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  color: var(--auth-fg);
+}
+
+.auth-lede {
+  margin: 0.75rem 0 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--auth-muted);
+}
+
+.auth-aside {
+  margin-top: 1.5rem;
+}
+
+/* ── Panel ──────────────────────────────────────────────────────────────── */
+
+.auth-panel {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 8px;
+  background: var(--auth-panel-bg);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/* ── Field ──────────────────────────────────────────────────────────────── */
+
+.auth-field {
+  display: block;
+}
+
+.auth-field-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.auth-field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--auth-fg);
+}
+
+.auth-field-hint {
+  font-size: 12px;
+  color: var(--auth-muted);
+}
+
+.auth-field input {
+  display: block;
+  width: 100%;
+  height: 40px;
+  margin-top: 0.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 6px;
+  background: var(--auth-bg);
+  color: var(--auth-fg);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.auth-field input:focus {
+  outline: 2px solid var(--auth-fg);
+  outline-offset: 1px;
+}
+
+.auth-field input::placeholder {
+  color: var(--auth-muted);
+}
+
+/* ── Submit ─────────────────────────────────────────────────────────────── */
+
+.auth-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 40px;
+  border: none;
+  border-radius: 6px;
+  background: var(--auth-accent);
+  color: var(--auth-accent-fg);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.auth-submit:hover {
+  opacity: 0.9;
+}
+
+.auth-submit:active {
+  transform: translateY(1px);
+}
+
+/* ── Notice ─────────────────────────────────────────────────────────────── */
+
+.auth-notice {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  background: var(--auth-info-bg);
+}
+
+.auth-notice[data-tone="ok"] {
+  background: var(--auth-ok-bg);
+}
+
+.auth-notice-error {
+  background: var(--auth-error-bg);
+}
+
+.auth-notice-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--auth-muted);
+}
+
+.auth-notice[data-tone="ok"] .auth-notice-label {
+  color: var(--auth-ok);
+}
+
+.auth-notice-error .auth-notice-label {
+  color: var(--auth-error);
+}
+
+.auth-notice-body {
+  margin-top: 0.25rem;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--auth-fg);
+}
+
+/* ── Link ───────────────────────────────────────────────────────────────── */
+
+.auth-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 13px;
+  color: var(--auth-muted);
+  text-decoration: none;
+}
+
+.auth-link:hover {
+  color: var(--auth-fg);
+  text-decoration: underline;
+}
+
+/*
+ * ── Facts ────────────────────────────────────────────────────────────────
+ * Label/value rows for the OAuth consent screen (e.g. "Workspace" →
+ * <org slug>), added by a later task. Defined here, ahead of that page,
+ * per the plan's list of classes app/globals.css must own.
+ */
+
+.auth-facts {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 13px;
+}
+
+.auth-facts dt {
+  color: var(--auth-muted);
+}
+
+.auth-facts dd {
+  margin: 0;
+  color: var(--auth-fg);
+  font-weight: 500;
+}
+
+/*
+ * ── Fact row ─────────────────────────────────────────────────────────────
+ * Label-left, value-right layout for one row of the consent screen's facts
+ * list (e.g. "Workspace" → <org slug>). `.auth-facts` above only sets the
+ * column rhythm between rows; this is the row itself.
+ */
+
+.auth-fact {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.auth-fact-label {
+  flex-shrink: 0;
+  color: var(--auth-muted);
+}
+
+.auth-fact-value {
+  min-width: 0;
+  overflow-wrap: break-word;
+  text-align: right;
+  color: var(--auth-fg);
+}
+
+.auth-fact-value-mono {
+  font-family: var(--auth-font-mono);
+  font-size: 12px;
+}
+
+/*
+ * ── Permissions list ─────────────────────────────────────────────────────
+ * The OAuth consent screen's computed grant (spec decision 7): a bulleted
+ * list of the tools this user's roles actually expose in this org.
+ */
+
+.auth-permissions-label {
+  font-family: var(--auth-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--auth-muted);
+}
+
+.auth-permissions {
+  list-style: none;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.auth-permission {
+  display: flex;
+  align-items: baseline;
+  gap: 0.6rem;
+}
+
+.auth-permission-dot {
+  flex-shrink: 0;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--auth-muted);
+  align-self: center;
+}
+
+.auth-permission-label {
+  min-width: 0;
+  overflow-wrap: break-word;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--auth-fg);
+}
+
+/*
+ * ── Client name clamp ────────────────────────────────────────────────────
+ * A DCR client picks its own display name — untrusted, up to 200 characters.
+ * A long name is stepped down a size and capped at three lines rather than
+ * left free to push the Allow button below the fold. The full value stays
+ * available via the element's `title` attribute.
+ */
+
+.auth-client-name {
+  display: block;
+  overflow-wrap: break-word;
+}
+
+.auth-client-name-clamp {
+  font-size: 26px;
+  line-height: 1.12;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/*
+ * ── Form layout ──────────────────────────────────────────────────────────
+ * Vertical rhythm inside a form (fields, then submit). Plain-CSS stand-in
+ * for the source repo's Tailwind `space-y-5`.
+ */
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+/*
+ * ── Links row ────────────────────────────────────────────────────────────
+ * Below-panel link placement. `.auth-links` centers a single link;
+ * `.auth-links-split` spaces two links to the edges.
+ */
+
+.auth-links {
+  display: flex;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.auth-links-split {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+/* ── Steps ──────────────────────────────────────────────────────────────── */
+
+.auth-steps {
+  margin-top: 2rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 8px;
+  background: var(--auth-panel-bg);
+}
+
+.auth-step {
+  display: flex;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+}
+
+.auth-step + .auth-step {
+  border-top: 1px solid var(--auth-border);
+}
+
+.auth-step-num {
+  margin-top: 0.125rem;
+  font-family: var(--auth-font-mono);
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+  color: var(--auth-muted);
+}
+
+.auth-step-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--auth-fg);
+}
+
+.auth-step-body {
+  margin: 0.25rem 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--auth-muted);
+}
+
+/* ── Emphasis / meta / note ─────────────────────────────────────────────── */
+
+.auth-emphasis {
+  color: var(--auth-fg);
+}
+
+.auth-meta {
+  margin-top: 1.5rem;
+  text-align: center;
+  font-family: var(--auth-font-mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  line-height: 1.5;
+  color: var(--auth-muted);
+}
+
+.auth-note {
+  margin-top: 1rem;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--auth-muted);
+}
+
+/*
+ * ── Admin console ────────────────────────────────────────────────────────
+ * `/admin/**`. Deliberately reuses the `--auth-*` custom properties above —
+ * one palette for the whole app, not a second one for this section. Covers
+ * `app/admin/layout.tsx`'s nav shell and `components/admin/*`.
+ */
+
+.admin-shell {
+  min-height: 100vh;
+  --admin-accent: #5b5bd6;
+  --admin-accent-soft: #efefff;
+  --admin-card: rgba(255, 255, 255, 0.9);
+  --admin-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 12px 36px rgba(16, 24, 40, 0.06);
+  --admin-hairline: #eceef1;
+  --admin-head: #f9fafb;
+  --admin-row-hover: #f6f6fe;
+  background:
+    radial-gradient(circle at 15% -10%, rgba(91, 91, 214, 0.13), transparent 32rem),
+    var(--auth-bg);
+  color: var(--auth-fg);
+  font-family: var(--auth-font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+.admin-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 2rem;
+  height: 68px;
+  border-bottom: 1px solid var(--auth-border);
+  background: color-mix(in srgb, var(--auth-panel-bg) 86%, transparent);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 20;
+}
+
+.admin-nav-wordmark {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--auth-fg);
+  text-decoration: none;
+}
+
+.admin-nav-wordmark small {
+  padding: 0.2rem 0.45rem;
+  border-radius: 999px;
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.admin-logo-mark {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: linear-gradient(145deg, #7070ea, #4141b8);
+  color: white;
+  box-shadow: 0 6px 16px rgba(70, 70, 190, 0.25);
+}
+
+.admin-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.admin-nav-link {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--auth-fg);
+  text-decoration: none;
+}
+
+.admin-nav-link:hover {
+  text-decoration: underline;
+}
+
+.admin-main {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 3.5rem 2rem 5rem;
+}
+
+/* ── Frame ──────────────────────────────────────────────────────────────── */
+
+.admin-frame {
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.admin-eyebrow {
+  margin-bottom: 1rem;
+  font-family: var(--auth-font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--admin-accent);
+}
+
+.admin-title {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 42px);
+  line-height: 1.25;
+  letter-spacing: -0.035em;
+  color: var(--auth-fg);
+}
+
+.admin-lede {
+  margin: 0.5rem 0 0;
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--auth-muted);
+}
+
+.admin-aside {
+  margin-top: 1.5rem;
+}
+
+/* ── Panel / form ───────────────────────────────────────────────────────── */
+
+.admin-panel {
+  margin-top: 1.5rem;
+  padding: 1.5rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 16px;
+  background: var(--admin-card);
+  box-shadow: var(--admin-shadow);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.admin-field {
+  display: block;
+}
+
+.admin-field-label-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.admin-field-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--auth-fg);
+}
+
+.admin-field-hint {
+  font-size: 12px;
+  color: var(--auth-muted);
+}
+
+.admin-field input {
+  display: block;
+  width: 100%;
+  height: 40px;
+  margin-top: 0.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 6px;
+  background: var(--auth-bg);
+  color: var(--auth-fg);
+  font-size: 14px;
+  font-family: inherit;
+}
+
+.admin-field input:focus {
+  outline: 2px solid var(--auth-fg);
+  outline-offset: 1px;
+}
+
+.admin-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 40px;
+  border: none;
+  border-radius: 6px;
+  background: var(--auth-accent);
+  color: var(--auth-accent-fg);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+}
+
+.admin-submit:hover {
+  opacity: 0.9;
+}
+
+.admin-submit:active {
+  transform: translateY(1px);
+}
+
+/* ── Destructive confirm ────────────────────────────────────────────────── */
+
+.admin-confirm-submit {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--auth-error) 35%, transparent);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--auth-error);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.admin-confirm-submit:hover {
+  background: var(--auth-error-bg);
+}
+
+/* ── Notice ─────────────────────────────────────────────────────────────── */
+
+.admin-notice {
+  padding: 0.75rem 1rem;
+  border-radius: 6px;
+  background: var(--auth-info-bg);
+}
+
+.admin-notice[data-tone="ok"] {
+  background: var(--auth-ok-bg);
+}
+
+.admin-notice-error {
+  background: var(--auth-error-bg);
+}
+
+.admin-notice-label {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--auth-muted);
+}
+
+.admin-notice[data-tone="ok"] .admin-notice-label {
+  color: var(--auth-ok);
+}
+
+.admin-notice-error .admin-notice-label {
+  color: var(--auth-error);
+}
+
+.admin-notice-body {
+  margin-top: 0.25rem;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--auth-fg);
+}
+
+/* ── Table ──────────────────────────────────────────────────────────────── */
+
+/*
+ * One card per table: an optional toolbar (title + count), then a
+ * horizontally scrollable body. Rows are separated by hairlines, highlight on
+ * hover, and the header sticks while a long table (the audit log) scrolls.
+ * Figures use tabular numerals so a column of counts or latencies lines up.
+ */
+.admin-table-wrap {
+  width: 100%;
+  margin-top: 1.5rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 14px;
+  background: var(--admin-card);
+  box-shadow: var(--admin-shadow);
+}
+
+/* A table inside a panel is already in a card; drop the second shadow and gap. */
+.admin-panel > .admin-table-wrap {
+  margin-top: 0;
+  box-shadow: none;
+}
+
+/* A section heading placed straight after a table needs room to breathe. */
+.admin-table-wrap + .admin-section-title {
+  margin-top: 2.5rem;
+}
+
+.admin-table-scroll {
+  overflow-x: auto;
+  border-radius: inherit;
+}
+
+.admin-table-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1.1rem;
+  border-bottom: 1px solid var(--auth-border);
+}
+
+.admin-table-toolbar + .admin-table-scroll {
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.admin-table-title {
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+}
+
+.admin-table-count {
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent);
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 13px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-table th,
+.admin-table td {
+  padding: 0.7rem 1rem;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--admin-hairline);
+}
+
+.admin-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding-top: 0.6rem;
+  padding-bottom: 0.6rem;
+  border-bottom-color: var(--auth-border);
+  background: var(--admin-head);
+  color: var(--auth-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.admin-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.admin-table tbody tr {
+  transition: background-color 120ms ease;
+}
+
+.admin-table tbody tr:hover td {
+  background: var(--admin-row-hover);
+}
+
+.admin-table td {
+  color: var(--auth-fg);
+}
+
+.admin-table td:first-child {
+  font-weight: 550;
+}
+
+.admin-table a {
+  color: var(--auth-fg);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.admin-table a:hover {
+  color: var(--admin-accent);
+}
+
+.admin-table code {
+  font-family: var(--auth-font-mono);
+  font-size: 12px;
+}
+
+.admin-table .admin-num {
+  text-align: right;
+  white-space: nowrap;
+}
+
+/* Secondary cell text: slugs, sources, "—" placeholders. */
+.admin-muted {
+  color: var(--auth-muted);
+  font-weight: 400;
+}
+
+/* Identifier rendered as a soft mono chip (key prefixes, slugs, tool names). */
+.admin-chip {
+  display: inline-block;
+  padding: 0.12rem 0.45rem;
+  border: 1px solid var(--admin-hairline);
+  border-radius: 6px;
+  background: var(--admin-head);
+  font-family: var(--auth-font-mono);
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Long free text (upstream errors) clipped to one line; full text on hover. */
+.admin-truncate {
+  display: block;
+  max-width: 360px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-nowrap {
+  white-space: nowrap;
+}
+
+/*
+ * `denied_org_mismatch` (a valid key for one org used against a different
+ * org's path) is, per `lib/audit/log.ts`, the single most security-relevant
+ * denial the gateway can observe — the one row on this page an operator must
+ * never scroll past. Marked on the row via `data-decision` (set for every
+ * row; this rule only matches the one value) rather than a one-off inline
+ * style, and reuses the existing error tokens rather than a new palette.
+ */
+.admin-table tr[data-decision="denied_org_mismatch"] td {
+  background: var(--auth-error-bg);
+}
+
+.admin-table tr[data-decision="denied_org_mismatch"] td:first-child {
+  box-shadow: inset 3px 0 0 var(--auth-error);
+}
+
+.admin-decision-critical {
+  color: var(--auth-error);
+  font-weight: 600;
+}
+
+/* ── Buttons / inline controls ──────────────────────────────────────────── */
+
+/*
+ * Compact buttons for table rows and toolbars. `.admin-btn` is the neutral
+ * secondary action; destructive actions keep `ConfirmSubmit`
+ * (`.admin-confirm-submit`), which shares this sizing.
+ */
+.admin-btn,
+.admin-table button.admin-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  height: 30px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 7px;
+  background: var(--auth-panel-bg);
+  color: var(--auth-fg);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 550;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow: 0 1px 1px rgba(16, 24, 40, 0.04);
+  transition: border-color 120ms ease, background-color 120ms ease, color 120ms ease;
+}
+
+.admin-btn:hover,
+.admin-table button.admin-link:hover {
+  border-color: color-mix(in srgb, var(--admin-accent) 45%, var(--auth-border));
+  color: var(--admin-accent);
+  text-decoration: none;
+}
+
+.admin-btn:disabled,
+.admin-table button.admin-link:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.admin-btn-primary {
+  border-color: transparent;
+  background: var(--auth-accent);
+  color: var(--auth-accent-fg);
+}
+
+.admin-btn-primary:hover {
+  border-color: transparent;
+  color: var(--auth-accent-fg);
+  opacity: 0.88;
+}
+
+.admin-actions {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.admin-actions-wrap {
+  flex-wrap: wrap;
+}
+
+.admin-actions form {
+  margin: 0;
+}
+
+.admin-select,
+.admin-table input[type="password"],
+.admin-table input[type="text"] {
+  height: 30px;
+  padding: 0 0.6rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 7px;
+  background: var(--auth-panel-bg);
+  color: var(--auth-fg);
+  font: inherit;
+  font-size: 12.5px;
+}
+
+.admin-select {
+  padding-right: 1.6rem;
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--auth-muted) 50%), linear-gradient(135deg, var(--auth-muted) 50%, transparent 50%);
+  background-position: calc(100% - 13px) 50%, calc(100% - 9px) 50%;
+  background-size: 4px 4px;
+  background-repeat: no-repeat;
+}
+
+.admin-select:focus-visible,
+.admin-btn:focus-visible,
+.admin-table input:focus-visible {
+  outline: 2px solid var(--admin-accent);
+  outline-offset: 1px;
+}
+
+/* Checkbox rendered as a toggleable pill (data roles). */
+.admin-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  height: 28px;
+  padding: 0 0.6rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 999px;
+  color: var(--auth-muted);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.admin-toggle input {
+  margin: 0;
+  accent-color: var(--admin-accent);
+}
+
+.admin-toggle:has(input:checked) {
+  border-color: transparent;
+  background: var(--admin-accent-soft);
+  color: var(--admin-accent);
+}
+
+/* Segmented radio group (admin role on the invite form). */
+.admin-segmented {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  border: 1px solid var(--auth-border);
+  border-radius: 9px;
+  background: var(--admin-head);
+}
+
+.admin-segmented label {
+  position: relative;
+  padding: 0.35rem 0.85rem;
+  border-radius: 7px;
+  color: var(--auth-muted);
+  font-size: 13px;
+  font-weight: 550;
+  cursor: pointer;
+}
+
+.admin-segmented input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.admin-segmented label:has(input:checked) {
+  background: var(--auth-panel-bg);
+  color: var(--auth-fg);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1);
+}
+
+.admin-segmented label:has(input:focus-visible) {
+  outline: 2px solid var(--admin-accent);
+}
+
+.admin-fieldset {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-fieldset legend {
+  margin-bottom: 0.5rem;
+  padding: 0;
+}
+
+/* ── Links / subnav / picker ────────────────────────────────────────────── */
+
+.admin-links {
+  margin: 1rem 0 0;
+}
+
+.admin-link {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--auth-fg);
+  text-decoration: none;
+}
+
+.admin-link:hover {
+  text-decoration: underline;
+}
+
+.admin-subnav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  margin: 2rem 0;
+  padding: 0.35rem;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid var(--auth-border);
+  border-radius: 12px;
+  background: var(--admin-card);
+  overflow-x: auto;
+  box-shadow: 0 1px 3px rgba(16, 24, 40, 0.04);
+}
+
+.admin-subnav .admin-link {
+  flex: 0 0 auto;
+  padding: 0.55rem 0.75rem;
+  border-radius: 8px;
+  color: var(--auth-muted);
+  text-decoration: none;
+}
+
+.admin-subnav .admin-link:hover {
+  color: var(--auth-fg);
+  background: var(--admin-accent-soft);
+}
+
+.admin-picker {
+  margin: 1.5rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.admin-picker-link {
+  display: block;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 6px;
+  background: var(--auth-panel-bg);
+  color: var(--auth-fg);
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.admin-picker-link:hover {
+  border-color: var(--auth-fg);
+}
+
+/* ── Empty state ────────────────────────────────────────────────────────── */
+
+.admin-empty {
+  margin: 1.5rem 0 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--auth-muted);
+}
+
+.admin-empty code {
+  font-family: var(--auth-font-mono);
+  font-size: 12px;
+  color: var(--auth-fg);
+}
+
+/* ── Dashboard, access catalog, and status language ───────────────────── */
+
+.admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.admin-stat-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 145px;
+  padding: 1.25rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 16px;
+  background: var(--admin-card);
+  box-shadow: var(--admin-shadow);
+}
+
+.admin-stat-card > span,
+.admin-stat-card > small {
+  color: var(--auth-muted);
+  font-size: 12px;
+}
+
+.admin-stat-card > strong {
+  margin: auto 0 0.2rem;
+  font-size: 30px;
+  letter-spacing: -0.04em;
+}
+
+.admin-section { margin-top: 2.5rem; }
+.admin-section-heading { display: flex; align-items: end; justify-content: space-between; gap: 2rem; }
+.admin-section-title { margin: 0.3rem 0 0; font-size: 19px; letter-spacing: -0.02em; }
+.admin-section-copy { max-width: 520px; margin: 0; color: var(--auth-muted); font-size: 13px; line-height: 1.55; }
+.admin-kicker { color: var(--admin-accent); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; }
+
+.admin-role-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 0.8rem;
+  margin-top: 1rem;
+}
+
+.admin-role-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.65rem;
+  padding: 1.1rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 14px;
+  background: var(--admin-card);
+}
+.admin-role-card strong { font-size: 16px; }
+.admin-role-card > span:last-child { color: var(--auth-muted); font-size: 12px; }
+
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: fit-content;
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 999px;
+  color: var(--auth-muted);
+  font-size: 11.5px;
+  font-weight: 600;
+  line-height: 1.4;
+  white-space: nowrap;
+}
+.admin-badge-ok::before,
+.admin-badge-warn::before,
+.admin-badge-danger::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+.admin-badge-accent { border-color: transparent; background: var(--admin-accent-soft); color: var(--admin-accent); }
+.admin-badge-ok { border-color: transparent; background: var(--auth-ok-bg); color: var(--auth-ok); }
+.admin-badge-warn { border-color: transparent; background: #fff3d6; color: #865b00; }
+.admin-badge-danger { border-color: transparent; background: var(--auth-error-bg); color: var(--auth-error); }
+
+.admin-tool-cell { min-width: 320px; max-width: 640px; }
+.admin-tool-cell code { display: block; font-weight: 700; }
+/*
+ * Tool descriptions are written for the model and run to paragraphs. Show
+ * three lines; clicking the summary expands the full text (no JS).
+ */
+.admin-tool-desc { margin-top: 0.3rem; color: var(--auth-muted); font-size: 12px; font-weight: 400; line-height: 1.5; }
+.admin-tool-desc summary { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; list-style: none; }
+.admin-tool-desc summary::-webkit-details-marker { display: none; }
+.admin-tool-desc summary:hover { color: var(--auth-fg); }
+.admin-tool-desc[open] summary { display: none; }
+.admin-tool-desc p { margin: 0; white-space: pre-line; }
+.admin-access-detail { display: flex; white-space: nowrap; flex-direction: column; gap: 0.2rem; min-width: 100px; color: var(--auth-muted); font-size: 11px; }
+.admin-access-yes { color: var(--auth-ok); font-size: 12px; font-weight: 700; }
+.admin-access-no { color: var(--auth-muted); font-size: 12px; }
+.admin-app-link { display: flex; flex-direction: column; gap: 0.2rem; font-weight: 650; text-decoration: none; }
+.admin-app-link span { color: var(--admin-accent); font-size: 11px; font-weight: 600; }
+.admin-date-stack { white-space: nowrap; }
+.admin-date-stack span, .admin-date-stack small { display: block; }
+.admin-date-stack small { margin-top: 0.1rem; color: var(--auth-muted); font-size: 11.5px; font-weight: 400; }
+
+.admin-ranking-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; }
+.admin-ranking { min-width: 0; }
+.admin-ranking .admin-table-wrap { margin-top: 0; border: 0; border-radius: 8px; box-shadow: none; }
+.admin-share-cell { position: relative; min-width: 110px; }
+.admin-share-cell span { position: relative; z-index: 1; }
+.admin-share-cell i { position: absolute; inset: auto 1rem 0.55rem 1rem; height: 3px; max-width: calc(100% - 2rem); border-radius: 2px; background: var(--admin-accent); }
+
+@media (prefers-color-scheme: dark) {
+  .admin-shell { --admin-accent: #aaaaff; --admin-accent-soft: #29294a; --admin-card: rgba(26, 28, 32, 0.92); --admin-shadow: none; --admin-hairline: #24272d; --admin-head: #1e2025; --admin-row-hover: #22233a; }
+  .admin-badge-warn { background: #3b3018; color: #ffd77d; }
+}
+
+@media (max-width: 720px) {
+  .admin-nav { padding: 0 1rem; }
+  .admin-nav-wordmark small, .admin-nav-links { display: none; }
+  .admin-main { padding: 2rem 1rem 4rem; }
+  .admin-section-heading { align-items: flex-start; flex-direction: column; gap: 0.6rem; }
+  .admin-ranking-grid { grid-template-columns: 1fr; }
+}
+
+/*
+ * Compact controls used inside an admin table row (the members page's
+ * per-row role and removal forms). Without these each control fell back to
+ * default browser block spacing, which pushed a five-column row several
+ * lines tall.
+ */
+.admin-row-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.375rem;
+  margin: 0;
+}
+
+.admin-checkbox-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.25rem 0;
+}
+
+.admin-checkbox-list label,
+.admin-row-form label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.8125rem;
+  color: var(--auth-fg);
+}
+
+/*
+ * Copy-to-clipboard field (components/copy-field.tsx). Used for MCP endpoint
+ * URLs on both the admin console and the signed-in landing page, so it lives
+ * outside the .admin-* namespace.
+ */
+.copy-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  margin: 0.75rem 0;
+}
+
+.copy-field-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--auth-muted);
+}
+
+.copy-field-row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.copy-field-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-family: var(--auth-font-mono);
+  font-size: 0.8125rem;
+  padding: 0.5rem 0.625rem;
+  border: 1px solid var(--auth-border);
+  border-radius: 6px;
+  background: var(--auth-bg);
+  color: var(--auth-fg);
+}
+
+.copy-field-button {
+  flex: 0 0 auto;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  border: 1px solid var(--auth-border);
+  border-radius: 6px;
+  background: var(--auth-accent);
+  color: var(--auth-accent-fg);
+  cursor: pointer;
+}
+
+.copy-field-button:hover {
+  opacity: 0.9;
+}

@@ -1,0 +1,78 @@
+{
+  "app": "helloworld",
+  "displayName": "Hello World (DummyJSON)",
+  "baseUrl": "https://dummyjson.com",
+  "auth": { "type": "none" },
+  "transport": {
+    "minIntervalMs": 100,
+    "timeoutMs": 15000,
+    "retry": { "attempts": 3, "on": ["429", "5xx"], "respectRetryAfter": true },
+    "errors": { "format": "json" }
+  },
+  "tools": [
+    {
+      "name": "hello",
+      "description": "Say hello. Answered by this app's adapter.ts without calling the upstream, so it works even when dummyjson.com is unreachable. Use it to confirm a client is connected to the gateway.",
+      "input": {
+        "type": "object",
+        "properties": {
+          "name": { "type": "string", "description": "Who to greet. Defaults to \"world\"." }
+        }
+      }
+    },
+    {
+      "name": "user_search",
+      "description": "Search DummyJSON's sample users by a free-text query matched against first name, last name, username and email. With no query it returns every user (about 200). The data is fake and public.",
+      "input": {
+        "type": "object",
+        "properties": {
+          "query": { "type": "string", "description": "Free text, e.g. \"Emily\"." }
+        }
+      },
+      "request": {
+        "method": "GET",
+        "path": "/users/search",
+        "query": { "q": "{{query}}" }
+      },
+      "list": {
+        "itemsAt": "users",
+        "pagination": {
+          "style": "offset",
+          "perPage": 50,
+          "maxPages": 5,
+          "params": { "limit": "limit", "offset": "skip" },
+          "totalCountAt": "total"
+        },
+        "dedupeBy": "id"
+      }
+    },
+    {
+      "name": "user_get",
+      "description": "Get one sample user by numeric id (1 to about 200).",
+      "input": {
+        "type": "object",
+        "properties": {
+          "userId": { "type": "integer", "description": "The user's id, from user_search." }
+        },
+        "required": ["userId"]
+      },
+      "request": { "method": "GET", "path": "/users/{{userId}}" }
+    },
+    {
+      "name": "user_create",
+      "description": "Create a sample user. DummyJSON simulates the write: it returns the new record with an id but stores nothing, so this is safe to call. Only the fields your role may write are accepted; naming any other field rejects the whole call.",
+      "input": {
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "object",
+            "description": "The user's fields, e.g. {\"firstName\": \"Ada\", \"lastName\": \"Lovelace\", \"email\": \"ada@example.com\"}."
+          }
+        },
+        "required": ["fields"]
+      },
+      "request": { "method": "POST", "path": "/users/add", "body": "{{fields}}" },
+      "write": { "fieldsFrom": "fields" }
+    }
+  ]
+}

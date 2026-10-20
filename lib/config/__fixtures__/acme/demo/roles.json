@@ -1,0 +1,8 @@
+{
+  "roles": {
+    "tech": {
+      "tools": ["customer_get"],
+      "fields": { "customer_*": { "allow": ["id"] } }
+    }
+  }
+}

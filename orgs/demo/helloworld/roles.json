@@ -1,0 +1,28 @@
+{
+  "roles": {
+    "viewer": {
+      "tools": ["hello", "user_search", "user_get"],
+      "fields": {
+        "hello": { "allow": ["message", "greeted"] },
+        "user_*": {
+          "allow": [
+            "id", "firstName", "lastName", "email",
+            "company.name", "company.title", "company.department"
+          ]
+        }
+      }
+    },
+    "owner": {
+      "tools": ["hello", "user_search", "user_get", "user_create"],
+      "fields": {
+        "hello": { "allow": ["*"] },
+        "user_*": { "allow": ["*"] }
+      },
+      "writes": {
+        "user_create": {
+          "allow": ["firstName", "lastName", "email", "phone", "company.name", "company.title"]
+        }
+      }
+    }
+  }
+}

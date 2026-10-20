@@ -1,0 +1,8 @@
+{
+  "name": "demo-helloworld",
+  "displayName": "Demo: Hello World",
+  "version": "0.1.0",
+  "description": "Example plugin for the demo/helloworld app: one skill that looks up DummyJSON sample users, with the gateway connector bundled.",
+  "author": { "name": "MCP Gateway" },
+  "keywords": ["demo", "example"]
+}

@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "helloworld": {
+      "type": "http",
+      "url": "https://gateway.example.com/mcp/demo/helloworld"
+    }
+  }
+}

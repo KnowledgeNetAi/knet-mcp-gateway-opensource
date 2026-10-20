@@ -1,0 +1,26 @@
+{
+  "app": "demo",
+  "displayName": "Demo",
+  "baseUrl": "https://example.test/v1",
+  "auth": {
+    "type": "oauth2_client_credentials",
+    "tokenUrl": "https://example.test/t",
+    "bodyFormat": "json",
+    "secrets": { "client_id": "acme/demo/client_id", "client_secret": "acme/demo/client_secret" },
+    "expiry": { "field": "expires_in", "coerce": "number", "skewSeconds": 60 }
+  },
+  "transport": {
+    "minIntervalMs": 600,
+    "timeoutMs": 120000,
+    "retry": { "attempts": 5, "on": ["429"], "respectRetryAfter": true },
+    "errors": { "format": "html" }
+  },
+  "tools": [
+    {
+      "name": "customer_get",
+      "description": "d",
+      "input": { "type": "object" },
+      "request": { "method": "GET", "path": "/customers" }
+    }
+  ]
+}
