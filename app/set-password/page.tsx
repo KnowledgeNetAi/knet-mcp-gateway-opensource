@@ -20,6 +20,18 @@ const ERRORS: Record<string, { label: string; detail: string }> = {
     label: "Passwords don't match",
     detail: "The two entries were different. Try again.",
   },
+  weak_password: {
+    label: "Password too weak",
+    detail: "Choose a longer password that is harder to guess.",
+  },
+  same_password: {
+    label: "Same as before",
+    detail: "Choose a password you have not used for this account.",
+  },
+  update_failed: {
+    label: "Couldn't save",
+    detail: "Your password was not changed. Try again, or request a new link.",
+  },
 };
 
 export default async function SetPasswordPage({
@@ -29,9 +41,7 @@ export default async function SetPasswordPage({
 }) {
   const sp = await searchParams;
   const known = sp.error ? ERRORS[sp.error] : null;
-  const error = sp.error
-    ? (known ?? { label: "Couldn't save", detail: sp.error })
-    : null;
+  const error = sp.error ? (known ?? ERRORS.update_failed) : null;
 
   return (
     <AuthFrame

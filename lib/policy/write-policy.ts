@@ -1,5 +1,7 @@
 import type { Json } from "@/lib/types";
 
+const MAX_WRITE_DEPTH = 32;
+
 /**
  * Decide whether a caller-supplied bag of fields may be written, given the
  * write allowlist their role grants for this tool.
@@ -80,7 +82,13 @@ export function writableFieldProblems(fields: Json, allow: readonly string[]): s
   // itself (Object.hasOwn is exactly what lib/mcp/handler.ts and
   // lib/policy/grants.ts use for the equivalent concern elsewhere in this
   // codebase).
-  const visit = (value: Json, path: string, rawKey = ""): void => {
+  const visit = (value: Json, path: string, rawKey = "", depth = 0): void => {
+    // No real record nests this deep, and an unbounded walk lets one request
+    // exhaust the stack before any audit row is written.
+    if (depth > MAX_WRITE_DEPTH) {
+      problems.push(`field "${path.slice(0, 200)}" is nested too deeply`);
+      return;
+    }
     const key = rawKey || path.split(".").at(-1)?.replace(/\[\]$/u, "") || path;
 
     // Dots and the [] marker belong to the policy path grammar, not upstream
@@ -110,7 +118,7 @@ export function writableFieldProblems(fields: Json, allow: readonly string[]): s
         problems.push(`field "${path}" must not be an empty array`);
         return;
       }
-      value.forEach((item) => visit(item, `${path}[]`));
+      value.forEach((item) => visit(item, `${path}[]`, "", depth + 1));
       return;
     }
 
@@ -121,7 +129,7 @@ export function writableFieldProblems(fields: Json, allow: readonly string[]): s
         return;
       }
       for (const [childKey, childValue] of entries) {
-        visit(childValue, `${path}.${childKey}`, childKey);
+        visit(childValue, `${path}.${childKey}`, childKey, depth + 1);
       }
       return;
     }

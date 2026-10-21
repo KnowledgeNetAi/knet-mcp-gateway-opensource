@@ -1,12 +1,12 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { originFromHeaders } from "@/lib/http/origin";
+import { emailLinkOrigin } from "@/lib/http/origin";
 import { setOneShotSecret } from "@/lib/admin/one-shot";
 import { requireOrgAdmin } from "@/lib/authz/viewer";
 import type { AdminRole } from "@/lib/authz/viewer";
 import { inviteMember, InviteError, validRolesForOrg } from "@/lib/admin/invite";
-import { setAdminRole, setDataRoles, removeMember, MemberError } from "@/lib/admin/members";
+import { setAdminRole, setDataRoles, removeMember, memberForLink, MemberError } from "@/lib/admin/members";
 import { writeAdminAudit } from "@/lib/admin/audit";
 import { createAdminClient } from "@/lib/supabase/admin";
 
@@ -240,7 +240,18 @@ export async function resendInviteAction(formData: FormData) {
   const { viewer, org } = await requireOrgAdmin(slug);
 
   const email = String(formData.get("email") ?? "").trim();
-  const redirectTo = `${await originFromHeaders()}/auth/confirm?next=/set-password`;
+  if (!(await memberForLink(org.id, email))) {
+    await writeAdminAudit({
+      viewer,
+      orgId: org.id,
+      action: "member.invite",
+      target: email,
+      detail: { reason: "not_a_member", resent: true },
+      outcome: "denied",
+    });
+    redirect(`/admin/orgs/${slug}/members?error=not_a_member`);
+  }
+  const redirectTo = `${await emailLinkOrigin()}/auth/confirm?next=/set-password`;
 
   const supabase = createAdminClient();
   const { error } = await supabase.auth.admin.inviteUserByEmail(email, { redirectTo });
@@ -287,6 +298,23 @@ export async function copyInviteLinkAction(formData: FormData) {
   const { viewer, org } = await requireOrgAdmin(slug);
 
   const email = String(formData.get("email") ?? "").trim();
+  // The link signs whoever opens it in as `email`, and it is shown to the
+  // acting admin. Only a member of this org qualifies, and only a super admin
+  // may copy the link of someone whose account reaches beyond this org.
+  const target = await memberForLink(org.id, email);
+  const refusal = !target ? "not_a_member" : target.beyondOrg && !viewer.isSuperAdmin ? "beyond_org" : null;
+  if (refusal) {
+    await writeAdminAudit({
+      viewer,
+      orgId: org.id,
+      action: "member.invite",
+      target: email,
+      detail: { reason: refusal, copiedLink: true },
+      outcome: "denied",
+    });
+    redirect(`/admin/orgs/${slug}/members?error=${refusal}`);
+  }
+
   const supabase = createAdminClient();
   const { data, error } = await supabase.auth.admin.generateLink({ type: "invite", email });
   const link = data?.properties?.action_link ?? null;

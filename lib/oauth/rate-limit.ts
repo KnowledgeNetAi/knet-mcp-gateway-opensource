@@ -1,9 +1,10 @@
 import "server-only";
 
-// Per-process, per-IP token bucket. Resets every windowMs. Adequate for
-// raising the bar on DCR abuse on a single Vercel instance; not a
-// distributed limiter. If we ever care about cross-instance limits, swap to
-// Postgres or a KV.
+// Per-process, per-IP fixed window. Resets every windowMs. It raises the bar
+// on registration abuse, but each instance counts separately, so N instances
+// allow N times the limit. Unused registrations are also swept after a week
+// (`sweep_unused_oauth_clients`). For a hard limit across instances, back
+// this with Postgres or a shared cache, or rate-limit at your load balancer.
 
 type Bucket = { count: number; windowStart: number };
 

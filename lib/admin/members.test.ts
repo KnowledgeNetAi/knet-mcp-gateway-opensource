@@ -124,6 +124,15 @@ function makeBuilder(table: string) {
       filters[col] = val;
       return builder;
     },
+    maybeSingle() {
+      const { data, error } = resolve();
+      const rows = Array.isArray(data) ? (data as Row[]) : [];
+      const match =
+        table === "memberships" && "user_id" in filters
+          ? membershipRows.find((r) => r.user_id === filters.user_id) ?? null
+          : rows[0] ?? null;
+      return Promise.resolve({ data: match, error });
+    },
     then<T1, T2>(
       onFulfilled?: ((v: { data: unknown; error: unknown }) => T1 | PromiseLike<T1>) | null,
       onRejected?: ((e: unknown) => T2 | PromiseLike<T2>) | null,
@@ -293,6 +302,13 @@ describe("setDataRoles", () => {
       reason: "unknown_role",
     });
     expect(deletedRoles).toEqual([]);
+    expect(insertedRoles).toEqual([]);
+  });
+
+  it("refuses to assign data roles to someone who is not a member of the org", async () => {
+    await expect(setDataRoles("o1", "contoso", "stranger", ["owner"])).rejects.toMatchObject({
+      reason: "not_a_member",
+    });
     expect(insertedRoles).toEqual([]);
   });
 

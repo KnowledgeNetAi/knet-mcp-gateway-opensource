@@ -234,6 +234,12 @@ function interpolatePath(template: string, args: Json): string {
     if (raw.length === 0 || raw === "." || raw === "..") {
       throw new Error(`path argument "${k}" must not be empty, "." or ".."`);
     }
+    // A slash is encoded below, but an upstream or proxy that decodes %2F
+    // before routing would still see a second path segment. An id never
+    // legitimately contains one, so refuse it rather than rely on encoding.
+    if (/[\/\\]/.test(raw)) {
+      throw new Error(`path argument "${k}" must not contain "/" or "\\"`);
+    }
     return encodeURIComponent(raw);
   });
 }

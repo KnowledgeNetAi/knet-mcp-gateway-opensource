@@ -120,7 +120,7 @@ async function main() {
       const url = new URL(cfg.baseUrl + path);
       for (const [k, v] of Object.entries(query)) url.searchParams.set(k, v);
       try {
-        const res = await fetch(url, { headers, signal: AbortSignal.timeout(60_000) });
+        const res = await fetch(url, { headers, signal: AbortSignal.timeout(60_000), redirect: "manual" });
         const text = await res.text();
         let body: Json;
         try { body = JSON.parse(text); } catch { body = undefined; }

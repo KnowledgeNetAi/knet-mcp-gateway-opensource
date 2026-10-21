@@ -319,13 +319,20 @@ async function writeMinimalRow(row: AuditRow, sink: AuditSink): Promise<void> {
  * down the request that triggered it, so it is logged instead, via
  * `logWriteFailure`.
  */
+// One caller must not be able to write arbitrarily large audit rows.
+const MAX_AUDIT_ARGS_CHARS = 16_384;
+
 export async function writeAudit(row: AuditRow, sink: AuditSink, redact: string[]): Promise<void> {
   let safeRow: AuditRow;
   try {
     const redactedArgs = redactArgs(row.args, redact);
-    safeRow = isJsonSerializable(redactedArgs)
-      ? { ...row, args: redactedArgs }
-      : { ...row, args: "[unloggable: not serializable]" };
+    const size = isJsonSerializable(redactedArgs) ? JSON.stringify(redactedArgs ?? null).length : -1;
+    safeRow =
+      size < 0
+        ? { ...row, args: "[unloggable: not serializable]" }
+        : size > MAX_AUDIT_ARGS_CHARS
+          ? { ...row, args: `[omitted: ${size} characters]` }
+          : { ...row, args: redactedArgs };
   } catch (e) {
     // Redaction or reading `row`'s own columns threw outright -- there is
     // no well-formed row to hand `sink`. Do not give up on the row itself:

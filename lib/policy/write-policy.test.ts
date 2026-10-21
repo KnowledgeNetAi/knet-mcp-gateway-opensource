@@ -200,3 +200,13 @@ describe("writableFieldProblems", () => {
     ]);
   });
 });
+
+describe("writableFieldProblems depth limit", () => {
+  it("refuses absurdly deep nesting instead of exhausting the stack", () => {
+    let deep: Json = "x";
+    for (let i = 0; i < 200_000; i++) deep = { a: deep };
+    const problems = writableFieldProblems({ fields: deep }, ["fields.a"]);
+    expect(problems.some((p) => p.includes("nested too deeply"))).toBe(true);
+  });
+});
+

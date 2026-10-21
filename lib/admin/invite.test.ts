@@ -10,7 +10,9 @@ const {
   upsertMock,
   fromMock,
   getCatalogMock,
+  rpcMock,
 } = vi.hoisted(() => ({
+  rpcMock: vi.fn(),
   inviteUserByEmailMock: vi.fn(),
   listUsersMock: vi.fn(),
   upsertMock: vi.fn(),
@@ -21,6 +23,7 @@ const {
 vi.mock("@/lib/supabase/admin", () => ({
   createAdminClient: () => ({
     from: fromMock,
+    rpc: rpcMock,
     auth: { admin: { inviteUserByEmail: inviteUserByEmailMock, listUsers: listUsersMock } },
   }),
 }));
@@ -57,12 +60,16 @@ const CATALOG = new Map<string, AppEntry>([
 // a test that should fail.
 let membershipUpsert: Record<string, unknown> | undefined;
 let roleUpserts: Array<Record<string, unknown>>;
+// The caller's existing membership in the org, if any.
+let existingMembership: { admin_role: "org_admin" | "member" } | null;
 
 beforeEach(() => {
   vi.clearAllMocks();
   getCatalogMock.mockReturnValue(CATALOG);
   membershipUpsert = undefined;
   roleUpserts = [];
+  existingMembership = null;
+  rpcMock.mockResolvedValue({ data: "ok", error: null });
 
   inviteUserByEmailMock.mockResolvedValue({ data: { user: { id: "u2" } }, error: null });
   upsertMock.mockImplementation(async (table: string, row: Record<string, unknown>) => {
@@ -81,7 +88,15 @@ beforeEach(() => {
         }),
       };
     }
-    if (table === "memberships" || table === "role_assignments") {
+    if (table === "memberships") {
+      return {
+        upsert: (row: Record<string, unknown>) => upsertMock(table, row),
+        select: () => ({
+          eq: () => ({ eq: () => ({ maybeSingle: async () => ({ data: existingMembership, error: null }) }) }),
+        }),
+      };
+    }
+    if (table === "role_assignments") {
       return { upsert: (row: Record<string, unknown>) => upsertMock(table, row) };
     }
     throw new Error(`unexpected table ${table}`);
@@ -168,5 +183,26 @@ describe("inviteMember", () => {
   it("never writes a platform role into role_assignments", async () => {
     await inviteMember({ ...args, adminRole: "org_admin", dataRoles: ["owner"] });
     expect(JSON.stringify(roleUpserts)).not.toMatch(/org_admin/);
+  });
+
+  it("re-inviting an existing member changes their admin role only through the last-admin check", async () => {
+    existingMembership = { admin_role: "org_admin" };
+    rpcMock.mockResolvedValue({ data: "last_admin", error: null });
+    await expect(
+      inviteMember({ orgSlug: "contoso", email: "a@b.co", adminRole: "member", dataRoles: [], invitedBy: null }),
+    ).rejects.toMatchObject({ reason: "last_admin" });
+    expect(rpcMock).toHaveBeenCalledWith("set_membership_admin_role", {
+      p_org_id: "o1",
+      p_user_id: "u2",
+      p_admin_role: "member",
+    });
+    expect(membershipUpsert).toBeUndefined();
+  });
+
+  it("never writes admin_role directly onto an existing membership", async () => {
+    existingMembership = { admin_role: "member" };
+    await inviteMember({ orgSlug: "contoso", email: "a@b.co", adminRole: "org_admin", dataRoles: [], invitedBy: null });
+    expect(rpcMock).toHaveBeenCalledTimes(1);
+    expect(membershipUpsert).not.toHaveProperty("admin_role");
   });
 });

@@ -25,7 +25,10 @@ export async function updatePasswordAction(formData: FormData) {
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    redirect(`/set-password?error=${encodeURIComponent(error.message)}`);
+    // A fixed code, never Supabase's message: the page shows only text it
+    // owns, so a crafted `?error=` link cannot put words on it.
+    const code = (error as { code?: string }).code;
+    redirect(`/set-password?error=${code === "weak_password" || code === "same_password" ? code : "update_failed"}`);
   }
   redirect("/");
 }

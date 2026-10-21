@@ -104,6 +104,7 @@ const { fakeDb, resetDb } = vi.hoisted(() => {
     api_keys: [],
     organizations: [],
     oauth_authorization_codes: [],
+    oauth_clients: [{ client_id: "oc_x", disabled_at: null }],
   };
   return {
     fakeDb: db,
@@ -111,6 +112,7 @@ const { fakeDb, resetDb } = vi.hoisted(() => {
       db.api_keys = [];
       db.organizations = [];
       db.oauth_authorization_codes = [];
+      db.oauth_clients = [{ client_id: "oc_x", disabled_at: null }];
     },
   };
 });
@@ -126,7 +128,7 @@ vi.mock("@/lib/supabase/admin", () => ({
 }));
 
 const { sweepMock } = vi.hoisted(() => ({ sweepMock: vi.fn(async () => {}) }));
-vi.mock("@/lib/oauth/cleanup", () => ({ sweepExpiredCodes: sweepMock }));
+vi.mock("@/lib/oauth/cleanup", () => ({ sweepExpiredCodes: sweepMock, sweepUnusedClients: vi.fn(async () => {}) }));
 
 import { POST } from "@/app/oauth/token/route";
 
@@ -194,6 +196,24 @@ describe("POST /oauth/token -- authorization_code", () => {
     expect(json.refresh_token.startsWith("kngwr_")).toBe(true);
     expect(json.token_type).toBe("Bearer");
     expect(json.expires_in).toBe(60 * 60 * 24 * 30);
+  });
+
+  it("refuses to exchange a code for a client that has been disabled", async () => {
+    fakeDb.oauth_clients = [{ client_id: "oc_x", disabled_at: new Date().toISOString() }];
+    const code = seedCode();
+    const res = await POST(
+      tokenRequest({
+        grant_type: "authorization_code",
+        code,
+        client_id: "oc_x",
+        redirect_uri: REDIRECT_URI,
+        code_verifier: VERIFIER,
+        resource: RESOURCE,
+      }),
+    );
+    expect(res.status).toBe(400);
+    expect((await res.json()).error).toBe("invalid_grant");
+    expect(fakeDb.api_keys).toEqual([]);
   });
 
   it("canonicalizes an accepted trailing slash before binding the issued token", async () => {

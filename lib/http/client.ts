@@ -304,7 +304,11 @@ export function createHttp(transport: TransportDef, fetchImpl: typeof fetch = fe
           const signal = init.signal
             ? AbortSignal.any([init.signal, AbortSignal.timeout(remaining)])
             : AbortSignal.timeout(remaining);
-          res = await fetchImpl(url, { ...init, signal });
+          // `redirect: "manual"`: a 3xx comes back as a failed response instead
+          // of being followed. Following one would re-send `requestHeaders`
+          // (which can carry a stored API key) and a write body to whatever
+          // host the Location names; fetch strips only `Authorization`.
+          res = await fetchImpl(url, { ...init, signal, redirect: "manual" });
         } catch (err) {
           // The caller cancelled (e.g. its MCP client disconnected) — this
           // must never be retried. Retrying would hold the request open

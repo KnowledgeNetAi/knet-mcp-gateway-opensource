@@ -152,6 +152,51 @@ export async function setAdminRole(
  * alone. Never touches a platform role — this table is data-access roles
  * only (Global Constraints).
  */
+/**
+ * Resolves `email` to a member of `orgId` before an org admin re-sends or
+ * copies a sign-in link for it. Both actions take the address from a form
+ * field, and `generateLink` mints a session link for whatever address it is
+ * given, so without this check any org admin could take over a pending user in
+ * another org. Returns null when the address is not a member of this org.
+ *
+ * `beyondOrg` is true when the person also belongs to another org or holds
+ * super admin. Their sign-in link opens more than this org, so only a super
+ * admin may copy it; re-sending is still fine because the mail goes to the
+ * person, not the admin.
+ */
+export async function memberForLink(
+  orgId: string,
+  email: string,
+): Promise<{ userId: string; beyondOrg: boolean } | null> {
+  const wanted = email.trim().toLowerCase();
+  if (!wanted) return null;
+
+  const supabase = createAdminClient();
+  const { data: page, error: listErr } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+  if (listErr) throw new MemberError("db_error", `error listing auth users: ${listErr.message}`);
+  const user = (page?.users ?? []).find(
+    (u: { id: string; email?: string }) => u.email?.toLowerCase() === wanted,
+  );
+  if (!user) return null;
+
+  const { data: rows, error: membershipErr } = await supabase
+    .from("memberships")
+    .select("org_id")
+    .eq("user_id", user.id);
+  if (membershipErr) throw new MemberError("db_error", `error reading memberships: ${membershipErr.message}`);
+  const orgIds = ((rows ?? []) as Array<{ org_id: string }>).map((r) => r.org_id);
+  if (!orgIds.includes(orgId)) return null;
+
+  const { data: adminRow, error: adminErr } = await supabase
+    .from("platform_admins")
+    .select("user_id")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (adminErr) throw new MemberError("db_error", `error reading platform_admins: ${adminErr.message}`);
+
+  return { userId: user.id, beyondOrg: orgIds.some((id) => id !== orgId) || adminRow !== null };
+}
+
 export async function setDataRoles(
   orgId: string,
   orgSlug: string,
@@ -169,6 +214,21 @@ export async function setDataRoles(
   }
 
   const supabase = createAdminClient();
+
+  // Role rows for someone outside the org would still be honored by the MCP
+  // path, which reads `role_assignments` by user and org alone.
+  const { data: membership, error: membershipErr } = await supabase
+    .from("memberships")
+    .select("user_id")
+    .eq("org_id", orgId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (membershipErr) {
+    throw new MemberError("db_error", `error reading membership: ${membershipErr.message}`);
+  }
+  if (!membership) {
+    throw new MemberError("not_a_member", `user "${userId}" is not a member of org "${orgId}"`);
+  }
 
   const { data: existingRows, error: existingErr } = await supabase
     .from("role_assignments")

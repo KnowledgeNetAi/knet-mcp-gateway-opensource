@@ -6,6 +6,8 @@ import {
   validateGrantTypes,
 } from "@/lib/oauth/clients";
 import { rateLimit } from "@/lib/oauth/rate-limit";
+import { clientIp } from "@/lib/oauth/client-ip";
+import { sweepUnusedClients } from "@/lib/oauth/cleanup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -16,14 +18,6 @@ type DcrRequest = {
   grant_types?: string[];
   token_endpoint_auth_method?: string;
 };
-
-function clientIp(req: NextRequest): string {
-  return (
-    req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
-    req.headers.get("x-real-ip") ??
-    "unknown"
-  );
-}
 
 function dcrError(code: string, description: string, status = 400) {
   return NextResponse.json(
@@ -88,6 +82,10 @@ export async function POST(req: NextRequest) {
       ip,
     }),
   );
+
+  // Registration spam is exactly what leaves unused clients behind, so sweep
+  // here too, not only on token exchange. Sampled, fire-and-forget.
+  void sweepUnusedClients(supabase).catch(() => {});
 
   return NextResponse.json(
     {

@@ -2,14 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { safeNextPath } from "@/lib/http/safe-next";
 
 function safeNext(next: string | null): string {
-  if (!next) return "/";
-  if (!next.startsWith("/")) return "/";
-  // Reject protocol-relative URLs ("//evil.com") and backslash variants
-  // ("/\\evil.com") that browsers may interpret as cross-origin.
-  if (next.startsWith("//") || next.startsWith("/\\")) return "/";
-  return next;
+  return safeNextPath(next, "/");
 }
 
 export async function signInAction(formData: FormData) {

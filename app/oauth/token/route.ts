@@ -4,7 +4,7 @@ import { hashAuthCode, verifyPkceS256 } from "@/lib/oauth/codes";
 import { issueOauthTokens, rotateRefreshToken } from "@/lib/oauth/tokens";
 import { issuerFromRequest } from "@/lib/oauth/issuer";
 import { parseResource, resourceUrl } from "@/lib/oauth/resource";
-import { sweepExpiredCodes } from "@/lib/oauth/cleanup";
+import { sweepExpiredCodes, sweepUnusedClients } from "@/lib/oauth/cleanup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -79,6 +79,16 @@ export async function POST(req: NextRequest) {
       return tokenError("invalid_grant", "code expired");
     }
     if (r.client_id !== client_id) return tokenError("invalid_grant", "client mismatch");
+    // A code issued in the seconds before its client was disabled must not
+    // still mint tokens (the disable trigger revokes only existing keys).
+    const { data: client } = await supabase
+      .from("oauth_clients")
+      .select("disabled_at")
+      .eq("client_id", r.client_id)
+      .maybeSingle();
+    if (!client || (client as { disabled_at: string | null }).disabled_at) {
+      return tokenError("invalid_grant", "client disabled");
+    }
     if (r.redirect_uri !== redirect_uri) {
       return tokenError("invalid_grant", "redirect_uri mismatch");
     }
@@ -134,6 +144,7 @@ export async function POST(req: NextRequest) {
     // 60-second-TTL table doesn't justify Cloud Scheduler. Fire-and-forget --
     // a sweep failure must never fail a token exchange.
     void sweepExpiredCodes(supabase).catch(() => {});
+    void sweepUnusedClients(supabase).catch(() => {});
 
     return NextResponse.json(
       {

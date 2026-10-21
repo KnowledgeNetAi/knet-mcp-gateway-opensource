@@ -8,6 +8,10 @@ import { grantSuperAdminAction, revokeSuperAdminAction } from "./actions";
 type SearchParams = Promise<{ error?: string }>;
 
 const ERRORS: Record<string, { label: string; detail: string }> = {
+  unconfirmed: {
+    label: "Invitation not accepted",
+    detail: "That person has not accepted their invitation yet. Grant super admin after they have signed in once.",
+  },
   no_such_user: {
     label: "No account found",
     detail: "That email has no account yet. Invite them first, then grant super admin.",

@@ -566,23 +566,20 @@ describe("(d) argument interpolation", () => {
       expect(new URL(url).pathname).toBe("/v1/customers/123/notes");
     });
 
-    it("an id containing a slash is percent-encoded, not treated as an extra path segment", async () => {
-      // Before the fix, path was built by raw concatenation (only query
-      // values went through URLSearchParams' automatic encoding), so this
-      // arg would have produced /customers/123/456/notes -- a different,
-      // wrong resource path -- instead of one opaque, if weird, id segment.
+    it("an id containing a slash or backslash is refused, not sent encoded", async () => {
+      // Encoding alone ("123%2F456") is not enough: an upstream or proxy that
+      // decodes %2F before routing would still see an extra path segment.
       const entry = makeEntry(byIdTool);
-      const url = await captureUrl(entry, byIdTool, { id: "123/456" });
-      const parsed = new URL(url);
-      expect(parsed.pathname).toBe("/v1/customers/123%2F456/notes");
-      expect(parsed.pathname.split("/").length).toBe(5); // "", v1, customers, <id>, notes -- no extra segment
+      const ctx = ctxWith(async () => ({ status: 200, data: {}, raw: "" }), entry.config);
+      for (const id of ["123/456", "../../secrets", "a\\b"]) {
+        await expect(runTool(entry, byIdTool, { id }, ctx)).rejects.toThrow(/must not contain/);
+      }
     });
 
-    it("an id containing .. alongside slashes does not traverse the path (the '/' case, closed in round 1)", async () => {
+    it("an id with characters that need encoding still becomes one path segment", async () => {
       const entry = makeEntry(byIdTool);
-      const url = await captureUrl(entry, byIdTool, { id: "../../secrets" });
-      const parsed = new URL(url);
-      expect(parsed.pathname).toBe("/v1/customers/..%2F..%2Fsecrets/notes");
+      const url = await captureUrl(entry, byIdTool, { id: "a b?c#d" });
+      expect(new URL(url).pathname).toBe("/v1/customers/a%20b%3Fc%23d/notes");
     });
 
     it("[fix round 2, finding A -- the slash fix alone was not sufficient] a bare '..' arg is rejected outright, not silently encoded", async () => {

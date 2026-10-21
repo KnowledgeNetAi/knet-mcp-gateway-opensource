@@ -284,17 +284,37 @@ variables from `.env.example`. The image listens on port 8080.
 rebuild and redeploy**. Vault secrets are the exception: they are read at
 runtime and cached for 5 minutes.
 
-Set `CANONICAL_ORIGIN` to your public URL (for example
-`https://gateway.example.com`) if your platform also serves the app on its own
-host (`*.run.app`, `*.vercel.app`). Browser pages on the other host then
-redirect, so invite links and cookies use the right origin. MCP and OAuth
-endpoints are never redirected.
+**Set `CANONICAL_ORIGIN` in every deployment** to your public URL (for
+example `https://gateway.example.com`). Invite and password-reset emails take
+their links from it; without it they fall back to the request's
+`X-Forwarded-Host`, which a client controls. It also redirects browser pages
+from a platform host (`*.run.app`, `*.vercel.app`) to your domain, so cookies
+use the right origin. MCP and OAuth endpoints are never redirected.
 
-In Supabase, set the Auth Site URL to the same origin, add `<origin>/**` to
-the redirect allowlist, and push the email templates in
-`supabase/templates/` (see the README there). Supabase's built-in email
-sender is rate-limited; configure your own SMTP before inviting more than a
-handful of people.
+In Supabase, set the Auth Site URL to the same origin and add `<origin>/**`
+to the redirect allowlist. A wildcard path on your own origin is fine; never
+allow a wildcard host (`https://*.run.app/**`), which would let a forged
+request point a real reset email at someone else's site. Push the email templates in `supabase/templates/` (see
+the README there). Supabase's built-in email sender is rate-limited; configure
+your own SMTP before inviting more than a handful of people.
+
+### Security notes for deployers
+
+- Dynamic client registration is open by design (claude.ai registers itself).
+  It is rate-limited per IP in memory, per instance, keyed on the rightmost
+  `X-Forwarded-For` entry (`lib/oauth/client-ip.ts`). That is the caller's
+  address on Vercel and on Cloud Run without a load balancer. Behind a
+  Google external load balancer, or any proxy of your own, the rightmost
+  entry is the proxy, so every caller shares one bucket; adjust that
+  function to skip your proxies. For a hard limit, also
+  rate-limit `/oauth/register` at your load balancer. Registrations that
+  never complete a token exchange are deleted after a week.
+- Setting `oauth_clients.disabled_at` revokes every token that client holds.
+- The gateway never follows an upstream redirect. An upstream that answers
+  with a 3xx fails the call; point `baseUrl` at the final location.
+- `audit_events` stores tool arguments, which can include customer data.
+  Name sensitive arguments in each tool's `audit.redact`, and keep the
+  90-day retention job described in `supabase/migrations/README.md`.
 
 ## Rotating a Vault secret
 

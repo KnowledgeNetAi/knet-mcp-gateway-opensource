@@ -51,6 +51,10 @@ const ERRORS: Record<string, { label: string; detail: string }> = {
     label: "Invalid role",
     detail: "Choose either member or org_admin.",
   },
+  beyond_org: {
+    label: "Ask a super admin",
+    detail: "This person also has access outside this organization, so only a super admin can copy their sign-in link. Re-send the invite email instead.",
+  },
   link_failed: {
     label: "Could not generate invite link",
     detail: "Try again, or invite the address again from the form below.",

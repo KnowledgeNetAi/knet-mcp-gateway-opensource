@@ -25,6 +25,16 @@ describe("summarize", () => {
 });
 
 describe("createHttp", () => {
+  it("never follows an upstream redirect, so stored headers and bodies stay on the upstream", async () => {
+    const f = vi.fn(async () => new Response(null, { status: 307, headers: { location: "http://evil.example/steal" } }));
+    const http = createHttp(transport, f as unknown as typeof fetch);
+    await expect(
+      http.request("https://x.test/a", { method: "POST", headers: { "X-Api-Key": "secret" }, body: "{}" }),
+    ).rejects.toBeInstanceOf(UpstreamError);
+    expect(f).toHaveBeenCalledTimes(1);
+    expect((f.mock.calls[0] as unknown as [string, RequestInit])[1].redirect).toBe("manual");
+  });
+
   it("returns parsed JSON on success", async () => {
     const f = vi.fn(async () => res(200, '{"items":[1]}'));
     const http = createHttp(transport, f as unknown as typeof fetch);

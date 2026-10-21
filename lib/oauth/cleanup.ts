@@ -33,3 +33,14 @@ export async function sweepExpiredCodes(supabase: SupabaseClient): Promise<void>
     .or(`expires_at.lt.${cutoff},consumed_at.lt.${cutoff}`);
   if (error) throw new Error(`sweepExpiredCodes: ${error.message}`);
 }
+
+/**
+ * Sampled like `sweepExpiredCodes`: removes dynamically registered clients
+ * that never completed a token exchange within a week
+ * (`sweep_unused_oauth_clients`, in the migrations).
+ */
+export async function sweepUnusedClients(supabase: SupabaseClient): Promise<void> {
+  if (Math.random() >= SAMPLE_RATE) return;
+  const { error } = await supabase.rpc("sweep_unused_oauth_clients");
+  if (error) throw new Error(`sweepUnusedClients: ${error.message}`);
+}

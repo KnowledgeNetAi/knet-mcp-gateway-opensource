@@ -1,4 +1,5 @@
 import type { EmailOtpType } from "@supabase/supabase-js";
+import { safeNextPath } from "@/lib/http/safe-next";
 
 /**
  * Parsing for Supabase email-link landing (`/auth/confirm`).
@@ -33,15 +34,7 @@ export function isEmailOtpType(value: unknown): value is EmailOtpType {
  * into an open redirect.
  */
 export function safeNext(next: string | null | undefined): string {
-  if (
-    !next ||
-    !next.startsWith("/") ||
-    next.startsWith("//") ||
-    next.startsWith("/\\")
-  ) {
-    return "/set-password";
-  }
-  return next;
+  return safeNextPath(next, "/set-password");
 }
 
 export type ConfirmIntent =

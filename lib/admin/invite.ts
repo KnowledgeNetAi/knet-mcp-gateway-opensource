@@ -21,11 +21,13 @@ export interface InviteResult {
  *     org's committed `roles.json`. Nothing is written when this fires.
  *   - "invite_failed": `inviteUserByEmail` failed for a reason other than
  *     the email already having an account.
+ *   - "last_admin": re-inviting an existing member with a lower admin role
+ *     would leave the org with no org_admin. Nothing is written.
  *   - "db_error": a `memberships`/`role_assignments` write failed.
  */
 export class InviteError extends Error {
   constructor(
-    public readonly reason: "no_such_org" | "unknown_role" | "invite_failed" | "db_error",
+    public readonly reason: "no_such_org" | "unknown_role" | "invite_failed" | "last_admin" | "db_error",
     message: string,
   ) {
     super(message);
@@ -166,15 +168,42 @@ export async function inviteMember(input: {
   // 3. Invite, or — if this email is already a user — find them instead.
   const { userId, alreadyExisted } = await inviteOrFindUser(supabase, email);
 
-  // 4. Upsert the membership row.
+  // 4. Upsert the membership row. For someone who is already a member, a
+  // requested admin role goes through `set_membership_admin_role`, the same
+  // locked database function the members page uses, so re-inviting the last
+  // org_admin as a member cannot leave the org with no administrator.
+  const { data: existing, error: existingErr } = await supabase
+    .from("memberships")
+    .select("admin_role")
+    .eq("user_id", userId)
+    .eq("org_id", orgRow.id)
+    .maybeSingle();
+  if (existingErr) {
+    throw new InviteError("db_error", `error reading membership row: ${existingErr.message}`);
+  }
+  const current = (existing as { admin_role: AdminRole } | null)?.admin_role ?? null;
+  if (current && adminRole && current !== adminRole) {
+    const { data: result, error: roleErr } = await supabase.rpc("set_membership_admin_role", {
+      p_org_id: orgRow.id,
+      p_user_id: userId,
+      p_admin_role: adminRole,
+    });
+    if (roleErr) throw new InviteError("db_error", `error setting admin role: ${roleErr.message}`);
+    if (result === "last_admin") {
+      throw new InviteError("last_admin", `re-inviting would leave org "${orgSlug}" with no org_admin`);
+    }
+    if (result !== "ok") throw new InviteError("db_error", `unexpected set_membership_admin_role result: ${String(result)}`);
+  }
+
   const { error: membershipErr } = await supabase.from("memberships").upsert(
     {
       user_id: userId,
       org_id: orgRow.id,
-      // Present only when the caller actually specified one — see the note on
-      // `adminRole` above. A key absent from the payload is not updated on
-      // conflict; a key present as `undefined` would be.
-      ...(adminRole ? { admin_role: adminRole } : {}),
+      // Only on a NEW membership — see the note on `adminRole` above, and the
+      // existing-member branch just before this. A key absent from the
+      // payload is not updated on conflict; a key present as `undefined`
+      // would be.
+      ...(adminRole && !current ? { admin_role: adminRole } : {}),
       invited_by: invitedBy,
       invited_at: new Date().toISOString(),
     },

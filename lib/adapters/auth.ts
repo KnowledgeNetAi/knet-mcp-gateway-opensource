@@ -113,6 +113,9 @@ export async function getUpstreamToken(entry: AppEntry, ctx: AdapterContext): Pr
     },
     body: isForm ? new URLSearchParams(body).toString() : JSON.stringify(body),
     signal: AbortSignal.timeout(config.transport.timeoutMs),
+    // A followed 307/308 would re-POST the client secret to whatever host
+    // the Location header names.
+    redirect: "manual",
   });
   if (!res.ok) throw new Error(`token request failed: HTTP ${res.status}`);
 

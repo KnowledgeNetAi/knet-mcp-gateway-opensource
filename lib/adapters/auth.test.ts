@@ -128,3 +128,17 @@ describe("getUpstreamToken grant selection", () => {
     expect(parsed.get("refresh_token")).toBe("value-of:o/demo/refresh_token");
   });
 });
+
+describe("getUpstreamToken redirects", () => {
+  it("never follows a redirect, which would re-send the client secret elsewhere", async () => {
+    let redirectMode: RequestRedirect | undefined;
+    global.fetch = (async (_url: string, init: RequestInit) => {
+      redirectMode = init.redirect;
+      return new Response(null, { status: 307, headers: { location: "https://evil.example/token" } });
+    }) as unknown as typeof fetch;
+    const entry = entryFor("redirect-org", clientCredentials);
+    await expect(getUpstreamToken(entry, ctxFor(entry))).rejects.toThrow(/HTTP 307/);
+    expect(redirectMode).toBe("manual");
+  });
+});
+

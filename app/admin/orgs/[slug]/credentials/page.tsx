@@ -57,6 +57,9 @@ function groupByApp(fields: CredentialField[]): Array<[string, CredentialField[]
   return [...byApp.entries()].sort(([a], [b]) => a.localeCompare(b));
 }
 
+/** Every non-HTTP-status detail `testConnection` can report. */
+const KNOWN_TEST_DETAILS = new Set(["connection failed", "no such app", "this app has no upstream credential"]);
+
 /**
  * `/admin/orgs/[slug]/credentials`. `requireOrgAdmin` gates the page render;
  * both Server Actions in `./actions.ts` perform the identical check again on
@@ -88,6 +91,14 @@ export default async function CredentialsPage({
   const fields = await credentialFieldsFor(slug);
   const apps = groupByApp(fields);
 
+  // The notices below are driven by the query string, which anyone can put in
+  // a link. Show only values this page could have produced itself, so a
+  // crafted URL cannot make the console display arbitrary text.
+  const saved = fields.some((f) => f.vaultName === sp.saved) ? sp.saved : undefined;
+  const tested = apps.some(([app]) => app === sp.tested) ? sp.tested : undefined;
+  const detail =
+    sp.detail && (/^HTTP \d{3}$/.test(sp.detail) || KNOWN_TEST_DETAILS.has(sp.detail)) ? sp.detail : "connection failed";
+
   return (
     <AdminFrame
       eyebrow={`Organizations / ${org.slug} / Credentials`}
@@ -101,18 +112,18 @@ export default async function CredentialsPage({
         </AdminNotice>
       )}
 
-      {sp.saved && (
+      {saved && (
         <AdminNotice tone="ok" label="Saved">
-          <code>{sp.saved}</code> was updated.
+          <code>{saved}</code> was updated.
         </AdminNotice>
       )}
 
-      {sp.tested && (
+      {tested && (
         <AdminNotice
           tone={sp.ok === "1" ? "ok" : "error"}
-          label={sp.ok === "1" ? `${sp.tested}: connection succeeded` : `${sp.tested}: connection failed`}
+          label={sp.ok === "1" ? `${tested}: connection succeeded` : `${tested}: connection failed`}
         >
-          {sp.ok !== "1" && sp.detail}
+          {sp.ok !== "1" && detail}
         </AdminNotice>
       )}
 

@@ -15,7 +15,7 @@ import {
   UNAUTHENTICATED,
   type JsonRpcId,
 } from "./jsonrpc";
-import { safeErrorMessage, type AuditRow } from "@/lib/audit/log";
+import { redactArgs, safeErrorMessage, type AuditRow } from "@/lib/audit/log";
 import { isValidOrgSlug } from "@/lib/policy/slug";
 import { resourceMetadataUrl, resourceUrl } from "@/lib/oauth/resource";
 
@@ -162,6 +162,55 @@ function clientErrorKind(status: number): string {
 /** Logs a failure server-side only. Never reaches the client response or an audit row —
  *  both of those must stay generic for an infrastructure failure (see `HandlerDeps.authenticate`
  *  usage below), but server logs are the one place the real detail is useful for on-call. */
+function principalKindOf(principal: Principal): "api_key" | "oauth" {
+  return principal.oauthResource !== null ? "oauth" : "api_key";
+}
+
+const MAX_ERROR_DETAIL_LEN = 2000;
+
+/** Every scalar `redactArgs` replaced, so the same values can be scrubbed elsewhere. */
+function redactedValues(
+  original: Json | undefined,
+  redacted: Json | undefined,
+  out: string[] = [],
+  depth = 0,
+): string[] {
+  if (original === null || original === undefined || depth > 32) return out;
+  if (typeof original !== "object") {
+    if (redacted !== original && String(original).length > 0) out.push(String(original));
+    return out;
+  }
+  if (redacted === null || typeof redacted !== "object") {
+    // A whole subtree was replaced: every scalar under it counts.
+    return redactedValues(original, undefined as unknown as Json, out, depth + 1);
+  }
+  for (const [k, v] of Object.entries(original)) {
+    redactedValues(v, (redacted as Record<string, Json>)[k], out, depth + 1);
+  }
+  return out;
+}
+
+/**
+ * An upstream error message names the full request URL and a slice of the
+ * response body. Before it is stored in the audit row or logged, drop query
+ * strings (built from caller arguments) and every value `audit.redact`
+ * covers, wherever it was interpolated, and cap the length.
+ */
+export function scrubErrorDetail(detail: string, args: Json, redact: string[]): string {
+  let out = detail.replace(/\?[^\s]*/g, "?[query omitted]");
+  if (redact.length > 0) {
+    try {
+      for (const raw of new Set(redactedValues(args, redactArgs(args, redact)))) {
+        for (const form of new Set([raw, encodeURIComponent(raw)])) out = out.split(form).join("[redacted]");
+      }
+    } catch {
+      // Never let scrubbing cost the audit row; keep only what cannot carry an argument.
+      out = "upstream request failed (detail withheld)";
+    }
+  }
+  return out.slice(0, MAX_ERROR_DETAIL_LEN);
+}
+
 function logFailure(event: string, e: unknown): void {
   try {
     console.error(JSON.stringify({ event, error: safeErrorMessage(e) }));
@@ -642,7 +691,7 @@ export async function handleMcpRequest(input: McpInput): Promise<Response> {
           {
             orgId: principal.orgId,
             userId: principal.userId,
-            principalKind: "api_key",
+            principalKind: principalKindOf(principal),
             app: found?.entry.app,
             // S2 (Task 12 final review): `tool` is always the bare, config-declared name once
             // a tool actually resolved — matching every other decision below (`denied_bad_args`,
@@ -653,7 +702,7 @@ export async function handleMcpRequest(input: McpInput): Promise<Response> {
             // run to answer "who has tried to use this tool and been refused." The raw,
             // caller-supplied `requested` string is kept only for `denied_unknown_tool`, where
             // nothing resolved and there is no config name to normalize to.
-            tool: found ? found.tool.name : requested,
+            tool: found ? found.tool.name : requested.slice(0, MAX_ATTEMPTED_ORG_LEN),
             decision: found ? "denied_no_grant" : "denied_unknown_tool",
             args: rawArgs,
             durationMs: Date.now() - started,
@@ -677,7 +726,7 @@ export async function handleMcpRequest(input: McpInput): Promise<Response> {
           {
             orgId: principal.orgId,
             userId: principal.userId,
-            principalKind: "api_key",
+            principalKind: principalKindOf(principal),
             app: entry.app,
             tool: tool.name,
             decision: "denied_bad_args",
@@ -722,7 +771,7 @@ export async function handleMcpRequest(input: McpInput): Promise<Response> {
             {
               orgId: principal.orgId,
               userId: principal.userId,
-              principalKind: "api_key",
+              principalKind: principalKindOf(principal),
               app: entry.app,
               tool: tool.name,
               decision: "denied_bad_args",
@@ -790,7 +839,7 @@ export async function handleMcpRequest(input: McpInput): Promise<Response> {
           {
             orgId: principal.orgId,
             userId: principal.userId,
-            principalKind: "api_key",
+            principalKind: principalKindOf(principal),
             app: entry.app,
             tool: tool.name,
             decision: "allowed",
@@ -811,13 +860,13 @@ export async function handleMcpRequest(input: McpInput): Promise<Response> {
           }),
         );
       } catch (e) {
-        const detail = safeErrorMessage(e);
+        const detail = scrubErrorDetail(safeErrorMessage(e), rawArgs, redact);
         await safeAudit(
           deps,
           {
             orgId: principal.orgId,
             userId: principal.userId,
-            principalKind: "api_key",
+            principalKind: principalKindOf(principal),
             app: entry.app,
             tool: tool.name,
             decision: "error",
@@ -838,7 +887,7 @@ export async function handleMcpRequest(input: McpInput): Promise<Response> {
         // auth-infrastructure-failure branch above applies here — the full detail belongs in
         // the audit row (`error`/`upstreamStatus`, already set above) and, if useful, a
         // server-side log, never in what goes back over the wire.
-        logFailure("mcp.tool_call_failed", e);
+        logFailure("mcp.tool_call_failed", detail);
         // Task 11 fix round 2, finding D: a stable class, never a status/URL/body — see
         // `failureClass`'s doc comment.
         return json(rpcError(id, INTERNAL_ERROR, `tool call failed: ${failureClass(e)}`));

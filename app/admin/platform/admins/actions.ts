@@ -54,6 +54,21 @@ export async function grantSuperAdminAction(formData: FormData) {
         (u: { id: string; email?: string }) => u.email?.toLowerCase() === email.toLowerCase(),
       ) ?? null);
 
+  // An account whose invitation was never accepted can still be claimed by
+  // whoever holds a fresh invite link for it, so it must not carry platform-
+  // wide standing until its owner has confirmed the address.
+  if (user && !(user as { email_confirmed_at?: string | null }).email_confirmed_at) {
+    await writeAdminAudit({
+      viewer,
+      orgId: null,
+      action: "superadmin.grant",
+      target: email,
+      detail: { reason: "unconfirmed" },
+      outcome: "denied",
+    });
+    redirect(`/admin/platform/admins?error=unconfirmed`);
+  }
+
   if (!user) {
     await writeAdminAudit({
       viewer,
@@ -130,12 +145,33 @@ export async function revokeSuperAdminAction(formData: FormData) {
     redirect(`/admin/platform/admins?error=db_error`);
   }
 
+  // A super admin can issue themselves keys in orgs they never joined. Those
+  // keys must not outlive the standing that let them be issued.
+  // If memberships cannot be read, revoke nothing rather than treat the user
+  // as a member of no org and revoke their legitimate keys too.
+  const { data: memberRows, error: memberErr } = await supabase
+    .from("memberships")
+    .select("org_id")
+    .eq("user_id", userId);
+  let keysErr: unknown = memberErr;
+  if (!memberErr) {
+    const memberOrgIds = ((memberRows ?? []) as Array<{ org_id: string }>).map((r) => r.org_id);
+    let revokeKeys = supabase
+      .from("api_keys")
+      .update({ revoked_at: new Date().toISOString() })
+      .eq("user_id", userId)
+      .is("revoked_at", null);
+    if (memberOrgIds.length > 0) revokeKeys = revokeKeys.not("org_id", "in", `(${memberOrgIds.join(",")})`);
+    ({ error: keysErr } = await revokeKeys);
+  }
+
   await writeAdminAudit({
     viewer,
     orgId: null,
     action: "superadmin.revoke",
     target: userId,
-    outcome: "ok",
+    ...(keysErr ? { detail: { reason: "key_revocation_failed" } } : {}),
+    outcome: keysErr ? "error" : "ok",
   });
   redirect("/admin/platform/admins");
 }
